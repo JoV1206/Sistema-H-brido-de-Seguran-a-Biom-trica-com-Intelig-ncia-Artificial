@@ -1,0 +1,42 @@
+# Senhas e Cofres
+vault.json
+admin.json
+
+# Dados Biométricos e Logs
+logs/
+data/faces/
+dashboard/data/faces/
+
+# Bibliotecas e Ambientes Virtuais
+node_modules/
+dashboard/node_modules/
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+
+# Compilados e Executáveis
+dist/
+dashboard/dist/
+*.exe
+.env
+
+# ==========================================
+# 5. CACHE DO VISUAL STUDIO E C++ (LIXO PESADO)
+# ==========================================
+.vs/
+x64/
+Debug/
+Release/
+*.obj
+*.pdb
+*.idb
+*.ipch
+*.db
+*.db-shm
+*.db-wal
+*.tlog
+*.ilk
+*.vsidx
+FaceUnlo*/
