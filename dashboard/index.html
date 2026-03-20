@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face ID - Painel de Segurança</title>
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        /* 1. Reset agressivo para libertar o teclado e o rato no Windows */
+        * { -webkit-app-region: no-drag; }
+        
+        input, select, textarea, button {
+            -webkit-user-select: auto !important;
+            user-select: auto !important;
+            pointer-events: auto !important;
+            cursor: text !important;
+        }
+        
+        button { cursor: pointer !important; }
+
+        /* 2. Oculta modais inativos DE VERDADE para não virarem "escudos invisíveis" */
+        .modal-overlay { transition: none !important; }
+        .modal-overlay:not(.active) {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            z-index: -9999 !important;
+            pointer-events: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="login-screen" class="modal-overlay active" style="background: var(--bg-main); z-index: 9999;">
+        <div class="modal-content" style="text-align: center; width: 400px; padding: 40px 30px;">
+            <h2 style="color: var(--accent); margin-bottom: 30px; font-size: 1.8rem;">🛡️ Face ID Admin</h2>
+            
+            <div id="setup-admin-view" style="display: none;">
+                <p style="margin-bottom: 20px;">Defina uma senha mestre para proteger o acesso a este painel.</p>
+                <input type="password" id="new-admin-pass" placeholder="Nova Senha Mestre" style="width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main);">
+                <button id="btn-set-admin" class="primary-btn" style="width: 100%;">Salvar Senha</button>
+            </div>
+            
+            <div id="login-admin-view" style="display: none;">
+                <p style="margin-bottom: 20px;">Acesso Restrito. Identifique-se.</p>
+                <input type="password" id="admin-pass" placeholder="Senha Mestre" style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main);">
+                <button id="btn-login-pass" class="primary-btn" style="width: 100%; margin-bottom: 15px; padding: 12px;">Desbloquear com Senha</button>
+                
+                <div style="display: flex; align-items: center; margin: 15px 0;">
+                    <hr style="flex: 1; border: 0; border-top: 1px solid var(--border);">
+                    <span style="padding: 0 10px; color: var(--text-muted); font-size: 0.9rem;">OU</span>
+                    <hr style="flex: 1; border: 0; border-top: 1px solid var(--border);">
+                </div>
+
+                <button id="btn-login-bio" class="primary-btn" style="width: 100%; background: var(--success); padding: 12px;">📸 Desbloquear com Face ID</button>
+                <p id="login-status" style="margin-top: 15px; color: var(--accent); font-size: 0.9rem;"></p>
+            </div>
+
+            <p style="text-align: center; color: var(--text-muted); font-size: 0.65rem; margin-top: 20px; letter-spacing: 0.5px;">
+                &copy; 2026 João Vitor Almeida Teodoro
+            </p>
+        </div>
+    </div>
+
+    <div class="app-container" id="main-app" style="display: none;">
+        <aside class="sidebar">
+            <div class="logo">🛡️ Face ID Admin</div>
+            <nav>
+                <button id="btn-logs" class="nav-btn active">Auditoria de Acesso</button>
+                <button id="btn-vault" class="nav-btn">Cofre de Usuários</button>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="btn-theme" class="theme-toggle" style="margin-bottom: 10px;">🌓 Mudar Tema</button>
+                <button id="btn-logout" class="danger-btn" style="width: 100%; background: transparent; border: 1px solid var(--danger); color: var(--danger);">🚪 Bloquear Painel</button>
+                
+                <p style="text-align: center; color: var(--text-muted); font-size: 0.75rem; margin-top: 20px; letter-spacing: 0.5px;">
+                    &copy; 2026 João Vitor Almeida Teodoro
+                </p>
+            </div>
+        </aside>
+
+        <main class="content">
+            <section id="section-logs" class="view-section active">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">Auditoria e Histórico de Acessos</h2>
+                    <button id="btn-clear-logs" class="danger-btn">🗑️ Limpar Histórico</button>
+                </div>
+                
+                <div class="stats-container">
+                    <div class="stat-card"><h3>Acessos Liberados</h3><p id="stat-success" class="stat-value success-text">0</p></div>
+                    <div class="stat-card"><h3>Acessos Negados</h3><p id="stat-blocked" class="stat-value danger-text">0</p></div>
+                    <div class="stat-card"><h3>Total de Registros</h3><p id="stat-total" class="stat-value">0</p></div>
+                </div>
+
+                <div style="position: relative; z-index: 100; display: flex; gap: 10px; margin-bottom: 20px; background: var(--card-bg); padding: 15px; border-radius: 10px; border: 1px solid var(--border);">
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Data</label>
+                        <input type="date" id="filter-date" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main);">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Status</label>
+                        <select id="filter-status" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main);">
+                            <option value="ALL">Todos os Status</option>
+                            <option value="SUCESSO">Aprovado (Sucesso)</option>
+                            <option value="NEGADO">Negado (Falha)</option>
+                            <option value="ALERTA">Alerta (Teclado)</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1.5;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Localização / IP</label>
+                        <input type="text" id="filter-location" placeholder="Ex: Ponte Nova..." style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main);">
+                    </div>
+                    <div style="display: flex; align-items: flex-end;">
+                        <button id="btn-clear-filters" class="danger-btn" style="padding: 8px 15px; height: 35px;">Limpar Filtros</button>
+                    </div>
+                </div>
+
+                <div id="logs-container" class="grid-container"></div>
+            </section>
+
+            <section id="section-vault" class="view-section">
+                <h2>Cofre e Biometria</h2>
+                <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                    <button id="btn-open-camera" class="primary-btn" style="background-color: var(--success); flex: 1;">📸 Adicionar Novo Usuário (Rosto + Senha)</button>
+                    <button id="btn-view-profiles" class="primary-btn" style="flex: 1;">🖼️ Visualizar Perfis Salvos</button>
+                </div>
+                <div id="users-list" class="users-list"></div>
+            </section>
+        </main>
+    </div>
+
+    <div id="identify-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Identificar Invasor</h3>
+            <p>Digite o nome da pessoa reconhecida nesta foto:</p>
+            <input type="text" id="identify-name-input" placeholder="Ex: Davi Francisco" style="width: 100%; padding: 10px; margin-bottom: 15px;">
+            <div class="modal-buttons">
+                <button id="btn-cancel-identify" class="danger-btn">Cancelar</button>
+                <button id="btn-confirm-identify" class="primary-btn">Salvar Nome</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="camera-modal" class="modal-overlay">
+        <div class="modal-content" style="width: 450px; text-align: center;">
+            <h3>Cadastrar Novo Usuário</h3>
+            <p>Posicione o rosto e preencha os dados de acesso ao Windows.</p>
+            <input type="text" id="new-face-name" placeholder="Nome do usuário (Ex: João Vitor)" style="margin-bottom: 10px; width: 100%; padding: 10px;">
+            <input type="password" id="new-face-pass" placeholder="Senha Real do Windows" style="margin-bottom: 15px; width: 100%; padding: 10px;">
+            <video id="webcam-video" autoplay playsinline style="width: 100%; border-radius: 8px; background: #000; margin-bottom: 15px; pointer-events: none;"></video>
+            <canvas id="webcam-canvas" style="display: none;"></canvas> 
+            <div class="modal-buttons" style="justify-content: center;">
+                <button id="btn-cancel-camera" class="danger-btn">Cancelar</button>
+                <button id="btn-capture-face" class="primary-btn">📸 Capturar e Salvar Tudo</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="profiles-modal" class="modal-overlay">
+        <div class="modal-content" style="width: 600px; max-width: 90vw;">
+            <h3>Perfis Biométricos Ativos</h3>
+            <p>Estas são as faces que a Inteligência Artificial conhece e autoriza.</p>
+            <div id="profiles-grid" class="profiles-grid"></div>
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button id="btn-close-profiles" class="primary-btn">Fechar Galeria</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/theme.js"></script>
+    <script src="js/logs.js"></script>
+    <script src="js/vault.js"></script>
+
+    <script>
+        // Força brutalmente o foco nas caixas de texto ao clicar nelas (Proteção Anti-Crash do Electron)
+        document.addEventListener('click', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                e.target.focus();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const hasPass = await window.api.hasAdminPass();
+            if (hasPass) {
+                document.getElementById('login-admin-view').style.display = 'block';
+            } else {
+                document.getElementById('setup-admin-view').style.display = 'block';
+            }
+        });
+
+        document.getElementById('btn-set-admin').onclick = async () => {
+            const pass = document.getElementById('new-admin-pass').value.trim();
+            if (pass.length < 4) return alert("A senha deve ter pelo menos 4 caracteres.");
+            await window.api.setAdminPass(pass);
+            alert("Senha configurada com sucesso!");
+            liberarAcesso();
+        };
+
+        document.getElementById('btn-login-pass').onclick = async () => {
+            const pass = document.getElementById('admin-pass').value.trim();
+            const isValid = await window.api.checkAdminPass(pass);
+            if (isValid) liberarAcesso();
+            else alert("Senha Mestre Incorreta!");
+        };
+
+        document.getElementById('btn-login-bio').onclick = async () => {
+            const statusLabel = document.getElementById('login-status');
+            statusLabel.innerText = "A ligar câmara e IA... Olhe para a lente e pisque!";
+            const isAuthorized = await window.api.verifyBiometricsAdmin();
+            if (isAuthorized === true) {
+                statusLabel.innerText = "Biometria Aprovada! A entrar...";
+                setTimeout(liberarAcesso, 1000);
+            } else if (isAuthorized === 'OFFLINE') {
+                statusLabel.innerText = "Erro: O servidor Python está desligado!";
+            } else {
+                statusLabel.innerText = "Acesso Biométrico Negado!";
+            }
+        };
+
+        function liberarAcesso() {
+            const loginScreen = document.getElementById('login-screen');
+            loginScreen.classList.remove('active');
+            setTimeout(() => {
+                loginScreen.style.display = 'none';
+                loginScreen.style.zIndex = '-9999'; // Afunda o login para trás de tudo
+                document.getElementById('main-app').style.display = 'flex';
+                if (typeof loadLogs === 'function') loadLogs();
+                if (typeof loadUsers === 'function') loadUsers();
+            }, 300);
+        }
+
+        document.getElementById('btn-logout').onclick = () => {
+            document.getElementById('main-app').style.display = 'none';
+            const loginScreen = document.getElementById('login-screen');
+            loginScreen.style.zIndex = '9999'; // Traz o login de volta para a frente
+            loginScreen.style.display = 'flex';
+            setTimeout(() => loginScreen.classList.add('active'), 10);
+            document.getElementById('admin-pass').value = '';
+            document.getElementById('login-status').innerText = '';
+        };
+
+        document.getElementById('btn-logs').onclick = () => {
+            document.getElementById('section-logs').classList.add('active');
+            document.getElementById('section-vault').classList.remove('active');
+            document.getElementById('btn-logs').classList.add('active');
+            document.getElementById('btn-vault').classList.remove('active');
+        };
+        document.getElementById('btn-vault').onclick = () => {
+            document.getElementById('section-vault').classList.add('active');
+            document.getElementById('section-logs').classList.remove('active');
+            document.getElementById('btn-vault').classList.add('active');
+            document.getElementById('btn-logs').classList.remove('active');
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "face-id-admin",
+  "version": "1.0.0",
+  "main": "main.js",
+  "author": "João Vitor Almeida <joao.vitor43592@gmail.com>",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.faceid.admin",
+    "productName": "Face ID Admin",
+    "win": {
+      "target": "portable",
+      "icon": "assets/icon.ico"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "devDependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}
